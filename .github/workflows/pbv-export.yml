@@ -1,0 +1,35 @@
+name: Export PBV
+
+on:
+  push:
+    paths:
+      - "63cb77aa317155a2313799f50383a8fe.pbv"
+
+permissions:
+  contents: write
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Encode PBV
+        shell: bash
+        run: |
+          mkdir -p pbv-export
+          base64 -w 0 "63cb77aa317155a2313799f50383a8fe.pbv" | split -b 900k - pbv-export/part-
+      - name: Rename chunks and commit
+        shell: bash
+        run: |
+          cd pbv-export
+          i=0
+          for f in part-*; do
+            mv "$f" "$(printf 'part-%03d.b64' "$i")"
+            i=$((i+1))
+          done
+          cd ..
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pbv-export
+          git commit -m "Export PBV as base64 chunks" || exit 0
+          git push
